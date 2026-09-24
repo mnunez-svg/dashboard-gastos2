@@ -1,0 +1,360 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard de Gestión de Gastos</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#667085;--line:#e6e9ef;--accent:#315efb;--good:#16865b;--bad:#c73b3b;--shadow:0 8px 24px rgba(24,39,75,.07)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#101828;color:#fff;padding:22px 30px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+h1{font-size:24px;margin:0 0 4px}.sub{color:#c8d0dd;font-size:13px}.container{max-width:1550px;margin:auto;padding:22px}
+.toolbar,.card{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+.toolbar{padding:16px;margin-bottom:18px}.filters{display:grid;grid-template-columns:repeat(4,minmax(190px,1fr));gap:12px}
+label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:6px}
+select,input[type=file],button{width:100%;padding:10px 11px;border:1px solid #d7dce5;border-radius:9px;background:#fff;color:var(--text)}
+.multi{position:relative}.multi-btn{text-align:left;display:flex;justify-content:space-between;align-items:center}.multi-menu{display:none;position:absolute;z-index:30;left:0;right:0;top:calc(100% + 5px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);padding:8px;max-height:280px;overflow:auto}.multi.open .multi-menu{display:block}.multi-search{position:sticky;top:0;background:#fff;padding:4px 2px 8px;border-bottom:1px solid var(--line);margin-bottom:5px}.multi-search input{width:100%;padding:8px 9px;border:1px solid #d7dce5;border-radius:8px;font-size:12px}.multi-option{display:flex;align-items:center;gap:8px;padding:7px 6px;font-size:12px;cursor:pointer;border-radius:6px}.multi-option span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.multi-empty{padding:10px 6px;color:var(--muted);font-size:12px}.multi-option:hover{background:#f5f7fb}.multi-option input{width:auto}.multi-actions{display:flex;gap:6px;padding:4px 2px 8px;border-bottom:1px solid var(--line);margin-bottom:5px}.multi-actions button{width:auto;padding:6px 8px;font-size:11px}
+.viewbar{display:flex;gap:8px;margin:18px 0 14px;flex-wrap:wrap}.viewbar button{width:auto;padding:9px 14px}.viewbar button.active{background:#101828;color:#fff;border-color:#101828}.view-panel{display:none}.view-panel.active{display:block}.matrix-wrap{overflow:auto;max-height:560px}.matrix-wrap table{min-width:850px}.matrix-wrap th,.matrix-wrap td{white-space:nowrap}.matrix-total{font-weight:800;background:#f8faff}.section-kicker{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+button{cursor:pointer;font-weight:700}.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}.actions button{width:auto}
+.status{margin-top:10px;font-size:12px;color:var(--muted)}
+.filebox{margin-top:14px;border:1px dashed #b8c1d1;padding:12px;border-radius:10px;background:#fafbff}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}.card{padding:18px}
+.kpi-label{font-size:12px;color:var(--muted);font-weight:700}.kpi{font-size:25px;font-weight:800;margin:7px 0}.kpi-small{font-size:12px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:1.35fr 1fr;gap:18px;margin-bottom:18px}.wide{grid-column:1/-1}
+.card h2{font-size:16px;margin:0 0 14px}.chart{height:310px}.bars{display:flex;align-items:end;gap:12px;height:245px;padding:10px 8px 0;border-bottom:1px solid var(--line)}
+.bar-wrap{flex:1;height:100%;display:flex;align-items:end}.bar{width:100%;border-radius:5px 5px 0 0;background:var(--accent);min-height:2px;position:relative}.bar:hover:after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#101828;color:#fff;padding:5px 7px;border-radius:5px;font-size:11px;white-space:nowrap;z-index:5}
+.xlabels{display:flex;gap:12px;padding:7px 8px}.xlabels div{flex:1;text-align:center;font-size:10px;color:var(--muted);overflow:hidden}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:9px 8px;border-bottom:1px solid var(--line);text-align:right}th:first-child,td:first-child{text-align:left}th{color:var(--muted);font-size:11px;text-transform:uppercase}
+.pos{color:var(--bad);font-weight:700}.neg{color:var(--good);font-weight:700}.empty{text-align:center;padding:45px;color:var(--muted)}
+.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;color:#2949c7;font-size:11px;font-weight:700}
+@media(max-width:1000px){.filters{grid-template-columns:repeat(2,1fr)}.cards{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}}
+
+.managerial{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.exec-card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px}
+.exec-card h3{font-size:14px;margin:0 0 12px}
+.exec-value{font-size:22px;font-weight:800;margin:5px 0}
+.exec-note{font-size:11px;color:var(--muted)}
+.alertbox{border-left:4px solid var(--accent);background:#f8faff;padding:12px;border-radius:8px;font-size:12px;line-height:1.55}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+.mini-table{max-height:360px;overflow:auto}
+.tag-up{color:var(--bad);font-weight:800}.tag-down{color:var(--good);font-weight:800}
+@media(max-width:1000px){.managerial,.dual{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){.managerial,.dual{grid-template-columns:1fr}}
+
+
+.report-screen{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:28px;margin-bottom:18px}
+.report-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #172033;padding-bottom:16px;margin-bottom:20px}
+.report-title{font-size:26px;font-weight:800}.report-meta{font-size:12px;color:var(--muted);margin-top:5px}
+.report-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:16px 0}
+.report-kpi{border:1px solid var(--line);border-radius:10px;padding:14px}.report-kpi b{font-size:20px;display:block;margin-top:5px}
+.report-section{margin-top:22px}.report-section h3{font-size:15px;margin:0 0 10px}
+.report-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.report-note{background:#f8faff;border-left:4px solid var(--accent);padding:13px;border-radius:7px;font-size:12px;line-height:1.55}
+.fxbar{display:flex;gap:10px;align-items:end;flex-wrap:wrap}.fxbar>div{min-width:180px;flex:1}.fxbar button{width:auto}
+.fx-source{font-size:11px;color:var(--muted);margin-top:8px}
+@media print{
+ body{background:#fff}.toolbar,.cards,.managerial,.grid,.dual{display:none!important}
+ .report-screen{box-shadow:none;border:0;padding:0}.report-screen+*{display:none}
+ header{background:#fff;color:#172033;padding:0 0 20px}.sub{color:#667085}
+}
+@media(max-width:800px){.report-grid,.report-cols{grid-template-columns:1fr 1fr}}
+@media(max-width:550px){.report-grid,.report-cols{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Dashboard de Gestión de Gastos</h1><div class="sub">Reporte gerencial · Carga automática desde archivos Odoo · Unidad · Centro de costo · Cuenta contable</div></div>
+  <div class="sub" id="dataStatus">Sin datos cargados</div>
+</header>
+
+<div class="container">
+<section class="toolbar">
+  <div class="filters">
+    <div class="multi" id="monthPicker"><label>Mes / período</label><button type="button" class="multi-btn" id="monthBtn">Todos los meses <span>▾</span></button><div class="multi-menu" id="monthMenu"></div></div>
+    <div class="multi" id="unitPicker"><label>Unidad de negocio</label><button type="button" class="multi-btn" id="unitBtn">Todas <span>▾</span></button><div class="multi-menu" id="unitMenu"></div></div>
+    <div class="multi" id="ccPicker"><label>Centro de costo / analítica</label><button type="button" class="multi-btn" id="ccBtn">Todos <span>▾</span></button><div class="multi-menu" id="ccMenu"></div></div>
+    <div class="multi" id="acctPicker"><label>Cuenta contable</label><button type="button" class="multi-btn" id="acctBtn">Todas <span>▾</span></button><div class="multi-menu" id="acctMenu"></div></div>
+  </div>
+
+  <div class="actions">
+    <button class="primary" onclick="document.getElementById('files').click()">Preparar carga Odoo</button>
+    <button onclick="loadDemo()">Cargar base de ejemplo</button>
+    <button onclick="clearData()">Limpiar histórico</button>
+    <input id="files" type="file" accept=".xlsx,.xls,.csv" multiple style="display:none">
+  </div>
+
+  <div class="filebox">
+    <b>Formato de carga automático</b><br>
+    No tenés que modificar los archivos de Odoo. Subí directamente los archivos con nombres como:
+    <span class="pill">DJI_Agosto.xlsx</span>
+    <span class="pill">PARAGUAY_Septiembre.xlsx</span>
+    <span class="pill">PTX NP_Octubre.xlsx</span><br><br>
+    El sistema identifica <b>Unidad de negocio + Mes</b> a partir del nombre del archivo y transforma la tabla dinámica de Odoo a una base analítica.
+  </div>
+  <div class="filebox" style="margin-top:12px;border-left:4px solid var(--accent)">
+    <b>Fuente central — Google Sheets</b><br>
+    En V11.1, Google Sheets es la base compartida. Vos preparás la carga desde este dashboard y exportás la base normalizada para importar en la hoja central. Los demás usuarios solo consultan la información central.
+    <div class="fxbar" style="margin-top:10px">
+      <div style="grid-column:span 2"><label>URL de Google Sheets central</label><input id="googleSheetUrl" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"></div>
+      <button class="primary" onclick="connectGoogleSheet()">Conectar / actualizar</button>
+      <button onclick="exportForGoogleSheets()">Exportar base para Sheets</button>
+    </div>
+    <div id="centralStatus" class="status">Fuente central: no configurada.</div>
+  </div>
+  <div class="status" id="help">También podés seleccionar varios archivos a la vez para cargar varios meses/unidades.</div>
+  <div class="status">Vista V7: todo el análisis operativo, gerencial y el reporte se expresan exclusivamente en <b>USD</b>. El TC se conserva únicamente como dato de conversión/control.</div>
+  <div class="filebox" style="margin-top:12px">
+    <b>Tipo de cambio BNA</b><br>
+    Podés registrar el tipo de cambio de cada mes manualmente, incluso antes de cargar los archivos de Odoo, o importar las cotizaciones diarias del BNA para calcularlo automáticamente.
+    <div class="fxbar" style="margin-top:10px">
+      <div><label>Mes a registrar</label><select id="fxMonth"></select></div>
+      <div><label>TC promedio manual (ARS/USD)</label><input id="fxManual" type="number" step="0.01" placeholder="Ej. 1500,00"></div>
+      <div><label>Tipo utilizado</label><select id="fxMethod"><option value="manual">Manual</option><option value="promedio">Promedio BNA Compra/Venta</option></select></div>
+      <button class="primary" onclick="saveFx()">Guardar TC</button>
+      <button onclick="document.getElementById('fxFile').click()">Importar cotizaciones BNA</button>
+      <input id="fxFile" type="file" accept=".csv,.xlsx,.xls" style="display:none">
+    </div>
+    <div class="fx-source">Referencia oficial: Banco de la Nación Argentina. El BNA publica cotización de dólar billete con compra y venta y dispone de histórico y descarga por rango de fechas. urlVer cotización BNAhttps://www.bna.com.ar/Personas/</div>
+    <div id="fxStatus" class="status"></div>
+  </div>
+</section>
+
+<div class="viewbar">
+  <button id="viewOpsBtn" class="active" onclick="switchView('ops')">Análisis operativo</button>
+  <button id="viewReportBtn" onclick="switchView('report')">Reporte del mes</button>
+  <button id="viewCompareBtn" onclick="switchView('compare')">Comparativa de períodos</button>
+</div>
+
+<div id="reportMonthBar" class="toolbar" style="display:none;padding:12px 16px">
+  <div style="max-width:320px"><label>Mes del reporte</label><select id="reportMonth"></select></div>
+  <div class="status">Esta selección define exclusivamente el <b>reporte mensual</b>. Los filtros superiores se utilizan para el análisis operativo y la comparativa.</div>
+</div>
+
+<div id="monthlyReport" class="report-screen view-panel">
+  <div class="empty">Cargá datos para generar el reporte mensual.</div>
+</div>
+<div id="app" class="view-panel active"><div class="empty">Cargá uno o varios archivos de Odoo para comenzar.</div></div>
+<div id="comparisonView" class="view-panel"></div>
+</div>
+
+<script>
+/* V11.1 - Google Sheets central source
+   Reads the published Google Sheet through Google Visualization JSONP.
+   This avoids the browser CORS problem that affected direct fetch() of the CSV.
+   Expected columns: month, unit, account, cc, amount, tc, source, updated_at
+*/
+const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1AOomYPHc9Y35xEQvKLxGJuof6ixOgoR_nyLi7pWddEs/edit?gid=106083404#gid=106083404";
+const GOOGLE_SHEET_REFRESH_MS = 5 * 60 * 1000;
+const GOOGLE_SHEET_KEY = "expenseDashboardGoogleSheetUrlV11";
+const GOOGLE_SHEET_AUTO = true;
+
+function googleSheetUrl(){
+  return (GOOGLE_SHEET_CSV_URL || localStorage.getItem(GOOGLE_SHEET_KEY) || "").trim();
+}
+function setGoogleSheetUrl(url){
+  const u=String(url||"").trim();
+  if(u) localStorage.setItem(GOOGLE_SHEET_KEY,u);
+  else localStorage.removeItem(GOOGLE_SHEET_KEY);
+}
+function extractGoogleSheetId(url){
+  const m=String(url||"").match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m?m[1]:"";
+}
+function extractGoogleSheetGid(url){
+  return (String(url||"").match(/[?#&]gid=([0-9]+)/)||[])[1] || "0";
+}
+function setCentralStatus(msg,ok=true){
+  const el=document.getElementById('centralStatus');
+  if(el){el.innerHTML=msg;el.style.color=ok?'#16865b':'#c73b3b';}
+}
+function gvizValue(cell){
+  if(!cell)return null;
+  if(cell.v!==undefined && cell.v!==null)return cell.v;
+  return cell.f!==undefined?cell.f:null;
+}
+function gvizToObjects(payload){
+  const table=payload?.table;
+  if(!table || !Array.isArray(table.cols) || !Array.isArray(table.rows)) throw new Error('Google Sheets devolvió una respuesta sin datos.');
+  const headers=table.cols.map((c,i)=>c.label || c.id || ('col'+i));
+  return table.rows.map(row=>{
+    const obj={};
+    headers.forEach((h,i)=>obj[h]=gvizValue(row.c?.[i]));
+    return obj;
+  });
+}
+function loadGoogleVisualizationJsonp(url){
+  return new Promise((resolve,reject)=>{
+    const callback='__expenseGsCb_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    const script=document.createElement('script');
+    let done=false;
+    const cleanup=()=>{try{delete window[callback]}catch(e){};script.remove();};
+    const timer=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Tiempo de espera agotado al consultar Google Sheets. Verificá que la hoja esté publicada en la web.'));},20000);
+    window[callback]=(payload)=>{if(done)return;done=true;clearTimeout(timer);cleanup();resolve(payload);};
+    script.onerror=()=>{if(done)return;done=true;clearTimeout(timer);cleanup();reject(new Error('Google Sheets no respondió. Verificá que la hoja esté publicada en la web y que la URL sea correcta.'));};
+    script.src=url+(url.includes('?')?'&':'?')+'tqx='+encodeURIComponent('responseHandler:'+callback)+'&headers=1';
+    document.head.appendChild(script);
+  });
+}
+function googleGvizUrl(url){
+  const id=extractGoogleSheetId(url);
+  if(!id)return '';
+  const gid=extractGoogleSheetGid(url);
+  return `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?gid=${encodeURIComponent(gid)}`;
+}
+function normalizeCentralRows(rows){
+  const keys=rows.length?Object.keys(rows[0]):[];
+  const pick=(names)=>keys.find(k=>names.some(n=>norm(k)===norm(n))) || keys.find(k=>names.some(n=>norm(k).includes(norm(n))));
+  const monthKey=pick(['month','mes','periodo','período']);
+  const unitKey=pick(['unit','unidad','unidad de negocio']);
+  const accountKey=pick(['account','cuenta','cuenta contable']);
+  const ccKey=pick(['cc','centro de costo','centro de coste','analitica','analítica']);
+  const amountKey=pick(['amount','importe','importe ars','monto','amount_ars']);
+  const tcKey=pick(['tc','tipo de cambio','tipo de cambio ars/usd','fx','tc ars usd']);
+  const sourceKey=pick(['source','archivo','file']);
+  if(!monthKey||!unitKey||!accountKey||!ccKey||!amountKey) throw new Error('La hoja central debe tener al menos: month/mes, unit/unidad, account/cuenta, cc/centro de costo y amount/importe.');
+  const out=[]; const fx={};
+  rows.forEach(r=>{
+    const month=String(r[monthKey]??'').trim();
+    const unit=String(r[unitKey]??'').trim();
+    const account=String(r[accountKey]??'').trim();
+    const cc=String(r[ccKey]??'').trim();
+    const amount=num(r[amountKey]);
+    if(!month||!unit||!account||!cc||!Number.isFinite(amount))return;
+    const m=MONTHS.find(x=>norm(x)===norm(month)) || month;
+    const tc=tcKey?num(r[tcKey]):0;
+    if(tc>0)fx[m]=tc;
+    out.push({month:m,unit,account,cc,amount,source:sourceKey?String(r[sourceKey]??''):''});
+  });
+  return {data:out,fx};
+}
+async function loadFromGoogleSheet(showAlert=false){
+  const raw=googleSheetUrl();
+  if(!raw){setCentralStatus('Fuente central: todavía no configurada.',false);return false;}
+  const id=extractGoogleSheetId(raw);
+  if(!id){setCentralStatus('La URL de Google Sheets no es válida.',false);if(showAlert)alert('Pegá el link normal de la Google Sheet, por ejemplo .../spreadsheets/d/ID/edit?gid=0');return false;}
+  const url=googleGvizUrl(raw);
+  try{
+    setCentralStatus('Actualizando desde Google Sheets…',true);
+    const payload=await loadGoogleVisualizationJsonp(url);
+    const parsed=normalizeCentralRows(gvizToObjects(payload));
+    if(!parsed.data.length)throw new Error('La hoja no contiene registros válidos.');
+    data=parsed.data;
+    const months=uniq(data.map(x=>x.month));
+    const newFx={};
+    months.forEach(m=>{if(parsed.fx[m]>0)newFx[m]={manual:parsed.fx[m],method:'manual',updatedAt:'Google Sheets'};});
+    fxRates=newFx;
+    loadLog=[];
+    const byFile={};
+    data.forEach(x=>{const f=x.source||'Google Sheets';if(!byFile[f])byFile[f]={filename:f,unit:x.unit,month:x.month,records:0,total:0};byFile[f].records++;byFile[f].total+=x.amount;});
+    loadLog=Object.values(byFile);
+    setup();
+    setCentralStatus(`<b>Conectado a Google Sheets.</b> ${data.length.toLocaleString('es-AR')} registros · actualizado ${new Date().toLocaleString('es-AR')}`,true);
+    return true;
+  }catch(err){
+    setCentralStatus('No se pudo leer Google Sheets: '+esc(err.message),false);
+    if(showAlert)alert('No se pudo leer Google Sheets. Verificá que la hoja esté publicada en la web y que tenga la estructura esperada.\n\n'+err.message);
+    return false;
+  }
+}
+function exportForGoogleSheets(){
+  if(!data.length){alert('Primero cargá archivos de Odoo.');return;}
+  const rows=data.map(x=>({month:x.month,unit:x.unit,account:x.account,cc:x.cc,amount:x.amount,tc:getFx(x.month)||'',source:x.source||'',updated_at:new Date().toISOString()}));
+  const ws=XLSX.utils.json_to_sheet(rows);
+  const csv=XLSX.utils.sheet_to_csv(ws);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='base_dashboard_gastos_google_sheets.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+function table(entries,label){
+  if(!entries.length)return '<div class="empty">Sin datos</div>';
+  const total=entries.reduce((s,e)=>s+e[1],0)||1;
+  return `<table><thead><tr><th>${label}</th><th>Importe USD</th><th>%</th></tr></thead><tbody>${entries.map(([k,v])=>`<tr><td>${esc(k)}</td><td>${moneyUSD(v)}</td><td>${(v/total*100).toFixed(1)}%</td></tr>`).join("")}</tbody></table>`;
+}
+
+function comparison(months,byM){
+  if(!months.length)return '<div class="empty">Sin datos</div>';
+  const first=byM[months[0]]||0;
+  return `<table><thead><tr><th>Mes</th><th>Gasto USD</th><th>Var. mes anterior</th><th>Var. vs. primer mes</th></tr></thead><tbody>${months.map((m,i)=>{
+    const v=byM[m]||0,p=i?byM[months[i-1]]:0,vm=p?(v-p)/Math.abs(p)*100:0,vf=first?(v-first)/Math.abs(first)*100:0;
+    return `<tr><td>${esc(m)}</td><td>${moneyUSD(v)}</td><td class="${vm>0?"pos":vm<0?"neg":""}">${i?pct(vm):"-"}</td><td class="${vf>0?"pos":vf<0?"neg":""}">${i?pct(vf):"-"}</td></tr>`;
+  }).join("")}</tbody></table>`;
+}
+
+function logTable(){
+  if(!loadLog.length)return '<div class="empty">No hay archivos registrados.</div>';
+  return `<table><thead><tr><th>Archivo</th><th>Unidad</th><th>Mes</th><th>Registros</th><th>Total gasto USD</th></tr></thead><tbody>${loadLog.map(x=>`<tr><td>${esc(x.filename)}</td><td>${esc(x.unit)}</td><td>${esc(x.month)}</td><td>${x.records.toLocaleString("es-AR")}</td><td>${getFx(x.month)?moneyUSD(x.total/getFx(x.month)):"-"}</td></tr>`).join("")}</tbody></table>`;
+}
+
+function connectGoogleSheet(){
+  const url=document.getElementById('googleSheetUrl')?.value.trim();
+  if(!url){alert('Pegá primero la URL de tu Google Sheets.');return;}
+  if(!extractGoogleSheetId(url)){alert('La URL no parece ser de Google Sheets.');return;}
+  setGoogleSheetUrl(url);
+  loadFromGoogleSheet(true);
+}
+
+async function processFile(file){
+  const meta=detectFileName(file.name);
+  if(meta.error) throw new Error(meta.error);
+
+  const buf=await file.arrayBuffer();
+  let rows;
+  if(file.name.toLowerCase().endsWith(".csv")){
+    const text=new TextDecoder("utf-8").decode(buf);
+    const wb=XLSX.read(text,{type:"string"});
+    rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+  }else{
+    const wb=XLSX.read(buf,{type:"array",cellDates:true});
+    rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:null});
+  }
+  const parsed=parseOdooSheet(rows,meta);
+  if(!parsed.length) throw new Error("El archivo '"+file.name+"' no contiene importes en la estructura esperada.");
+  return {meta,parsed};
+}
+
+document.getElementById("files").addEventListener("change",async e=>{
+  const files=[...e.target.files];
+  if(!files.length)return;
+  let added=0,errors=[];
+  for(const file of files){
+    try{
+      const result=await processFile(file);
+      // Replace previous upload if same filename + month + unit, avoiding duplicate loading.
+      data=data.filter(x=>x.source!==result.meta.filename);
+      data.push(...result.parsed);
+      loadLog=loadLog.filter(x=>x.filename!==result.meta.filename);
+      loadLog.push({filename:result.meta.filename,unit:result.meta.unit,month:result.meta.month,records:result.parsed.length,total:result.parsed.reduce((s,x)=>s+x.amount,0)});
+      added++;
+    }catch(err){errors.push(file.name+": "+err.message);}
+  }
+  setup();
+  document.getElementById("help").innerHTML=(added?`<b>${added}</b> archivo(s) procesado(s) correctamente.`:"")+" "+(errors.length?`<span style="color:#c73b3b">${errors.join(" · ")}</span>`:"");
+  e.target.value="";
+});
+
+function loadDemo(){
+  if(!confirm('La base de ejemplo reemplazará temporalmente la base cargada en este navegador. ¿Continuar?'))return;
+  data=DEMO.slice();
+  loadLog=[{filename:'DJI_Agosto.xlsx',unit:'DJI',month:'Agosto',records:DEMO.length,total:DEMO.reduce((s,x)=>s+x.amount,0)}];
+  fxRates={...fxRates,'Agosto':{manual:1500,method:'manual',updatedAt:'Demo'}};
+  localStorage.setItem('expenseDashboardFxRatesV1',JSON.stringify(fxRates));
+  setup();
+  document.getElementById('help').innerHTML='<b>Base de ejemplo:</b> sirve únicamente para probar el funcionamiento del dashboard sin cargar archivos reales. Genera datos ficticios basados en la estructura de Odoo y utiliza un TC ilustrativo de Agosto = 1.500. <b>No es necesario usar este botón para la carga real.</b>';
+}
+function clearData(){
+  if(confirm("¿Eliminar todo el histórico guardado en este navegador?")){
+    data=[];loadLog=[];localStorage.removeItem("expenseDashboardDataV2");localStorage.removeItem("expenseDashboardLoadLogV2");location.reload();
+  }
+}
+multiSelections={months:data.length?MONTHS.filter(m=>data.some(x=>x.month===m)):[],units:uniq(data.map(x=>x.unit)),ccs:null,accounts:null};
+const savedGsUrl=googleSheetUrl();
+if(document.getElementById('googleSheetUrl')) document.getElementById('googleSheetUrl').value=savedGsUrl;
+if(savedGsUrl) loadFromGoogleSheet(false);
+else if(data.length) setup();
+</script>
+</body>
+</html>
+<script>setInterval(()=>{if(googleSheetUrl()) loadFromGoogleSheet(false);},GOOGLE_SHEET_REFRESH_MS);</script>
