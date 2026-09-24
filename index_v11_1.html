@@ -194,7 +194,8 @@ function loadGoogleVisualizationJsonp(url){
     const timer=setTimeout(()=>{if(done)return;done=true;cleanup();reject(new Error('Tiempo de espera agotado al consultar Google Sheets. Verificá que la hoja esté publicada en la web.'));},20000);
     window[callback]=(payload)=>{if(done)return;done=true;clearTimeout(timer);cleanup();resolve(payload);};
     script.onerror=()=>{if(done)return;done=true;clearTimeout(timer);cleanup();reject(new Error('Google Sheets no respondió. Verificá que la hoja esté publicada en la web y que la URL sea correcta.'));};
-    script.src=url+(url.includes('?')?'&':'?')+'tqx='+encodeURIComponent('responseHandler:'+callback)+'&headers=1';
+    script.src=url+(url.includes('?')?'&':'?')+'tqx='+encodeURIComponent('out:json;responseHandler:'+callback)+'&headers=1';
+    console.log('Google Sheets GViz URL:', script.src);
     document.head.appendChild(script);
   });
 }
